@@ -1,0 +1,23 @@
+{
+  "name": "instagram_feed_meta",
+  "version": "1.0.0",
+  "description": "Backend Node.js pour récupérer les derniers posts Instagram d'un compte via l'API Meta",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "multer": "^2.0.2",
+    "noogger": "^0.1.8",
+    "fb": "^2.0.0",
+    "body-parser": "^1.20.2"
+  }
+}
