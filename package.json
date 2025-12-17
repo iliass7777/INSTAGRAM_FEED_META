@@ -12,12 +12,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.20.2",
+    "cheerio": "^1.1.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "multer": "^2.0.2",
-    "noogger": "^0.1.8",
     "fb": "^2.0.0",
-    "body-parser": "^1.20.2"
+    "multer": "^2.0.2",
+    "node-fetch": "^2.7.0",
+    "noogger": "^0.1.8"
   }
 }

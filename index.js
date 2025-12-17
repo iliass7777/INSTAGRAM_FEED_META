@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const multer = require('multer');
+const path = require('path');
 const app = express();
 
 /* CORS Management */
@@ -15,10 +16,17 @@ app.use(upload.array());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
+/* Servir les fichiers statiques (page HTML) */
+app.use(express.static(path.join(__dirname, 'clients')));
+
 /* API Routes - Instagram Graph API */
 require('./routes/reporting.routes')(app , 'api/v1');
 
-/* Default Route (Home) */
+/* Default Route (Home) - Servir la page HTML */
+app.get("/", (req , res) => {
+    res.sendFile(path.join(__dirname, 'clients', 'index.html'));
+});
+
 app.get("/api", (req , res) => {
     res.status(200);
     res.send("META API - Instagram Feed Backend");

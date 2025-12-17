@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Feed</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+        
+        /* Search Box */
+        .search-box {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .input-group {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px 12px 40px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .input-group::before {
+            content: '@';
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .limit-select {
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .search-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .search-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Profile Info */
+        .profile-info {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .profile-info.show {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .profile-username {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .profile-stats {
+            margin-left: auto;
+        }
+        
+        .stat {
+            text-align: center;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-number {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #666;
+        }
+        
+        /* Posts Grid - Style Instagram */
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .post-item {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .post-item img,
+        .post-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .post-item:hover img,
+        .post-item:hover video {
+            transform: scale(1.05);
+        }
+        
+        /* Icône vidéo en haut à droite */
+        .post-type-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 20px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+        
+        /* Overlay au survol */
+        .post-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+        
+        .post-item:hover .post-overlay {
+            opacity: 1;
+        }
+        
+        .post-overlay-stats {
+            display: flex;
+            gap: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .post-overlay-stats span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .post-overlay-caption {
+            color: white;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 10px 15px;
+            max-width: 90%;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        /* Modal pour vidéo/image */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 450px;
+            width: 100%;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .modal-media {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .modal-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .modal-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: -45px;
+            right: 0;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .modal-close:hover {
+            opacity: 0.7;
+        }
+        
+        .modal-info {
+            background: white;
+            padding: 15px 20px;
+        }
+        
+        .modal-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .modal-stats span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .modal-caption {
+            color: #333;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        
+        .modal-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Error */
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 800px) {
+            .posts-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        @media (max-width: 500px) {
+            .posts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .search-form {
+                flex-direction: column;
+            }
+            
+            .input-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📸 Instagram Feed</h1>
+            <p>Récupérez les posts de n'importe quel compte public</p>
+        </header>
+        
+        <div class="search-box">
+            <form class="search-form" id="searchForm">
+                <div class="input-group">
+                    <input type="text" id="username" placeholder="nom_utilisateur" required>
+                </div>
+                <select class="limit-select" id="limit">
+                    <option value="8">8 posts</option>
+                    <option value="12" selected>12 posts</option>
+                    <option value="24">24 posts</option>
+                </select>
+                <button type="submit" class="search-btn" id="searchBtn">
+                    Rechercher
+                </button>
+            </form>
+        </div>
+        
+        <div class="profile-info" id="profileInfo">
+            <span class="profile-username" id="profileUsername">@username</span>
+            <div class="profile-stats">
+                <div class="stat">
+                    <div class="stat-number" id="postCount">0</div>
+                    <div class="stat-label">Posts</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="content">
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <p>Entrez un nom d'utilisateur Instagram pour voir ses posts</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal pour afficher image/vidéo -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">×</button>
+            <div class="modal-media" id="modalMedia"></div>
+            <div class="modal-info" id="modalInfo"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/v1/instagram/posts';
+        const PROXY_URL = 'http://localhost:5000/api/v1/proxy/image?url=';
+        
+        const searchForm = document.getElementById('searchForm');
+        const usernameInput = document.getElementById('username');
+        const limitSelect = document.getElementById('limit');
+        const searchBtn = document.getElementById('searchBtn');
+        const content = document.getElementById('content');
+        const profileInfo = document.getElementById('profileInfo');
+        const profileUsername = document.getElementById('profileUsername');
+        const postCount = document.getElementById('postCount');
+        const modal = document.getElementById('modal');
+        const modalClose = document.getElementById('modalClose');
+        const modalMedia = document.getElementById('modalMedia');
+        const modalInfo = document.getElementById('modalInfo');
+        
+        let postsData = [];
+        
+        function getProxyUrl(url) {
+            if (!url) return '';
+            return PROXY_URL + encodeURIComponent(url);
+        }
+        
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = usernameInput.value.trim().replace('@', '');
+            const limit = limitSelect.value;
+            
+            if (!username) return;
+            
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Chargement...';
+            profileInfo.classList.remove('show');
+            
+            content.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Récupération des posts de @${username}...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`${API_URL}?username=${username}&limit=${limit}`);
+                const data = await response.json();
+                
+                if (data.success && data.data.length > 0) {
+                    postsData = data.data;
+                    profileUsername.textContent = `@${data.username}`;
+                    postCount.textContent = data.count;
+                    profileInfo.classList.add('show');
+                    
+                    content.innerHTML = `<div class="posts-grid">${data.data.map((post, index) => renderPost(post, index)).join('')}</div>`;
+                    
+                    // Ajouter les événements de clic
+                    document.querySelectorAll('.post-item').forEach(item => {
+                        item.addEventListener('click', () => openModal(item.dataset.index));
+                    });
+                } else {
+                    content.innerHTML = `<div class="error">${data.error || 'Aucun post trouvé'}</div>`;
+                }
+            } catch (error) {
+                content.innerHTML = `<div class="error">Erreur de connexion au serveur</div>`;
+            }
+            
+            searchBtn.disabled = false;
+            searchBtn.textContent = 'Rechercher';
+        });
+        
+        function renderPost(post, index) {
+            const imageUrl = getProxyUrl(post.thumbnail_url || post.media_url);
+            const isVideo = post.media_type === 'VIDEO';
+            
+            return `
+                <div class="post-item" data-index="${index}">
+                    <img src="${imageUrl}" alt="Post" loading="lazy">
+                    ${isVideo ? '<span class="post-type-icon">▶️</span>' : ''}
+                    <div class="post-overlay">
+                        <div class="post-overlay-stats">
+                            <span>❤️ ${formatNumber(post.likes)}</span>
+                            <span>💬 ${formatNumber(post.comments)}</span>
+                        </div>
+                        <p class="post-overlay-caption">${post.caption || ''}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function openModal(index) {
+            const post = postsData[index];
+            if (!post) return;
+            
+            const isVideo = post.media_type === 'VIDEO';
+            
+            if (isVideo && post.video_url) {
+                modalMedia.innerHTML = `
+                    <video controls autoplay playsinline>
+                        <source src="${getProxyUrl(post.video_url)}" type="video/mp4">
+                    </video>
+                `;
+            } else {
+                modalMedia.innerHTML = `<img src="${getProxyUrl(post.media_url)}" alt="Post">`;
+            }
+            
+            modalInfo.innerHTML = `
+                <div class="modal-stats">
+                    <span>❤️ ${formatNumber(post.likes)}</span>
+                    <span>💬 ${formatNumber(post.comments)}</span>
+                </div>
+                <p class="modal-caption">${post.caption || 'Pas de description'}</p>
+                <a href="${post.permalink}" target="_blank" class="modal-link">Voir sur Instagram →</a>
+            `;
+            
+            modal.classList.add('show');
+        }
+        
+        modalClose.addEventListener('click', () => {
+            modal.classList.remove('show');
+            modalMedia.innerHTML = '';
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+                modalMedia.innerHTML = '';
+            }
+        });
+        
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+    </script>
+</body>
+</html>

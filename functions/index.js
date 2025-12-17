@@ -1,46 +1,136 @@
-// Fonction simple : Appel direct à l'API Instagram Graph
-// Exactement comme le code JavaScript : graph.instagram.com/me/media
+// Fonctions pour récupérer les posts Instagram
 const https = require('https');
+const fetch = require('node-fetch');
 
 module.exports = {
-    // Récupère les posts du compte associé au token (/me/media)
+  
     getInstagramMedia: async function (access_token, limit = 6) {
         const url = `https://graph.instagram.com/me/media?fields=id,media_type,media_url,timestamp,permalink&access_token=${access_token}&limit=${limit}`;
         return this.makeHttpsRequest(url);
     },
 
-    // Récupère les posts d'un compte Instagram spécifique par ig_account_id
-    getInstagramMediaByAccountId: async function (ig_account_id, access_token, limit = 6) {
-        const url = `https://graph.instagram.com/${ig_account_id}/media?fields=id,media_type,media_url,timestamp,permalink&access_token=${access_token}&limit=${limit}`;
-        return this.makeHttpsRequest(url);
+    getPublicInstagramPosts: async function (username, limit = 12) {
+        try {
+            // Méthode 1: Via l'endpoint web d'Instagram
+            const posts = await this.scrapeInstagramProfile(username, limit);
+            return {
+                success: true,
+                username: username,
+                count: posts.length,
+                data: posts
+            };
+        } catch (error) {
+            return {
+                success: false,
+                username: username,
+                error: error.message || 'Erreur lors de la récupération des posts',
+                data: []
+            };
+        }
     },
 
-    // Récupère l'ig_account_id à partir d'un username Instagram
-    getInstagramAccountIdFromUsername: async function (username, access_token) {
-        // Méthode 1: Via Facebook Graph API (si le username est une page Facebook)
-        try {
-            const url = `https://graph.facebook.com/v18.0/${username}?fields=instagram_business_account&access_token=${access_token}`;
-            const result = await this.makeHttpsRequest(url);
-            if (result.instagram_business_account && result.instagram_business_account.id) {
-                return result.instagram_business_account.id;
+    // Scrape le profil Instagram public
+    scrapeInstagramProfile: async function (username, limit = 12) {
+        // Utilise l'API web d'Instagram (endpoint public)
+        const url = `https://www.instagram.com/api/v1/users/web_profile_info/?username=${username}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'X-IG-App-ID': '936619743392459',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Referer': `https://www.instagram.com/${username}/`,
+                'Origin': 'https://www.instagram.com'
             }
-        } catch (error) {
-            // Si ça ne fonctionne pas, on essaie la méthode 2
+        });
+
+        if (!response.ok) {
+            // Si l'API web échoue, essayer la méthode alternative
+            return await this.scrapeInstagramProfileAlt(username, limit);
         }
 
-        // Méthode 2: Recherche directe via Instagram Graph API
-        try {
-            // Note: Cette méthode nécessite que le username soit un compte Business/Creator
-            const url = `https://graph.instagram.com/${username}?fields=id&access_token=${access_token}`;
-            const result = await this.makeHttpsRequest(url);
-            return result.id;
-        } catch (error) {
-            // Si les deux méthodes échouent, on retourne null
-            return null;
+        const data = await response.json();
+        
+        if (!data.data || !data.data.user) {
+            throw new Error('Utilisateur non trouvé ou profil privé');
         }
+
+        const user = data.data.user;
+        const edges = user.edge_owner_to_timeline_media?.edges || [];
+        
+        const posts = edges.slice(0, limit).map(edge => {
+            const node = edge.node;
+            return {
+                id: node.id,
+                shortcode: node.shortcode,
+                media_type: node.is_video ? 'VIDEO' : 'IMAGE',
+                media_url: node.display_url,
+                video_url: node.is_video ? node.video_url : null,
+                thumbnail_url: node.thumbnail_src || node.display_url,
+                caption: node.edge_media_to_caption?.edges[0]?.node?.text || '',
+                timestamp: new Date(node.taken_at_timestamp * 1000).toISOString(),
+                permalink: `https://www.instagram.com/p/${node.shortcode}/`,
+                likes: node.edge_liked_by?.count || 0,
+                comments: node.edge_media_to_comment?.count || 0
+            };
+        });
+
+        return posts;
     },
 
-    // Fonction utilitaire pour faire des requêtes HTTPS
+    // Méthode alternative de scraping
+    scrapeInstagramProfileAlt: async function (username, limit = 12) {
+        // Essayer via la page HTML
+        const url = `https://www.instagram.com/${username}/?__a=1&__d=dis`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Impossible d'accéder au profil @${username}. Le compte est peut-être privé ou n'existe pas.`);
+        }
+
+        const text = await response.text();
+        
+        // Essayer de parser le JSON si c'est une réponse JSON
+        try {
+            const data = JSON.parse(text);
+            if (data.graphql && data.graphql.user) {
+                const user = data.graphql.user;
+                const edges = user.edge_owner_to_timeline_media?.edges || [];
+                
+                return edges.slice(0, limit).map(edge => {
+                    const node = edge.node;
+                    return {
+                        id: node.id,
+                        shortcode: node.shortcode,
+                        media_type: node.is_video ? 'VIDEO' : 'IMAGE',
+                        media_url: node.display_url,
+                        video_url: node.is_video ? node.video_url : null,
+                        thumbnail_url: node.thumbnail_src || node.display_url,
+                        caption: node.edge_media_to_caption?.edges[0]?.node?.text || '',
+                        timestamp: new Date(node.taken_at_timestamp * 1000).toISOString(),
+                        permalink: `https://www.instagram.com/p/${node.shortcode}/`,
+                        likes: node.edge_liked_by?.count || 0,
+                        comments: node.edge_media_to_comment?.count || 0
+                    };
+                });
+            }
+        } catch (e) {
+            // Ce n'est pas du JSON, continuer avec le HTML
+        }
+
+        throw new Error(`Impossible de récupérer les posts de @${username}. Instagram bloque peut-être les requêtes.`);
+    },
+
+    // Fonction utilitaire pour les requêtes HTTPS
     makeHttpsRequest: function (url) {
         return new Promise((resolve, reject) => {
             https.get(url, (res) => {
