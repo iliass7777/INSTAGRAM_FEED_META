@@ -1,7 +1,12 @@
 const controller = require("../controllers/reporting.controller");
 
 module.exports = function (app, pre) {
-  // Endpoint principal : Récupérer les posts Instagram via Instagram Graph API
-  // Appel direct à graph.instagram.com/me/media
+  // Endpoint principal : Récupérer les posts d'un compte Instagram PUBLIC
   app.get(`/${pre}/instagram/posts`, [], controller.getInstagramPosts);
+  
+  // Proxy pour les images Instagram (évite CORS)
+  app.get(`/${pre}/proxy/image`, [], controller.proxyImage);
+  
+  // Endpoint secondaire : Récupérer VOS propres posts (nécessite token)
+  app.get(`/${pre}/instagram/me`, [], controller.getMyInstagramPosts);
 };
