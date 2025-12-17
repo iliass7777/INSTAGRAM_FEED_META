@@ -32,6 +32,14 @@ app.get("/embed/:id", (req , res) => {
     res.sendFile(path.join(__dirname, 'clients', 'embed.html'));
 });
 
+/* Route admin */
+app.get("/admin", (req , res) => {
+    res.sendFile(path.join(__dirname, 'clients', 'admin', 'index.html'));
+});
+app.get("/admin/", (req , res) => {
+    res.sendFile(path.join(__dirname, 'clients', 'admin', 'index.html'));
+});
+
 app.get("/api", (req , res) => {
     res.status(200);
     res.send("META API - Instagram Feed Backend");

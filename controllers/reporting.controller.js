@@ -169,3 +169,64 @@ exports.deleteEmbed = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// ========== AUTHENTICATION ==========
+
+// Générer un token simple
+function generateToken(userId) {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(userId + Date.now() + Math.random()).digest('hex');
+}
+
+// Stockage simple des tokens (en mémoire)
+const tokens = new Map();
+
+exports.login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username et password requis" });
+    }
+    
+    const user = db.login(username, password);
+    
+    if (!user) {
+      return res.status(401).json({ error: "Identifiants incorrects" });
+    }
+    
+    const token = generateToken(user.id.toString());
+    tokens.set(token, { userId: user.id, createdAt: Date.now() });
+    
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, username: user.username }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: "Token requis" });
+  }
+  
+  const tokenData = tokens.get(token);
+  if (!tokenData) {
+    return res.status(401).json({ error: "Token invalide" });
+  }
+  
+  // Token expire après 24h
+  if (Date.now() - tokenData.createdAt > 24 * 60 * 60 * 1000) {
+    tokens.delete(token);
+    return res.status(401).json({ error: "Token expiré" });
+  }
+  
+  req.userId = tokenData.userId;
+  next();
+};

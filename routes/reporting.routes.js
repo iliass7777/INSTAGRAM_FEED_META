@@ -10,6 +10,9 @@ module.exports = function (app, pre) {
   // Endpoint secondaire : Récupérer VOS propres posts (nécessite token)
   app.get(`/${pre}/instagram/me`, [], controller.getMyInstagramPosts);
   
+  // ========== AUTHENTICATION ==========
+  app.post(`/${pre}/auth/login`, [], controller.login);
+  
   // ========== EMBED MANAGEMENT ==========
   app.post(`/${pre}/embeds`, [], controller.createEmbed);
   app.get(`/${pre}/embeds`, [], controller.listEmbeds);
