@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "better-sqlite3": "^12.5.0",
     "body-parser": "^1.20.2",
     "cheerio": "^1.1.2",
     "cors": "^2.8.5",
@@ -21,5 +22,8 @@
     "multer": "^2.0.2",
     "node-fetch": "^2.7.0",
     "noogger": "^0.1.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
   }
 }
