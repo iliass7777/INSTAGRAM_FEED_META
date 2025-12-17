@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Feed Embed</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #fafafa;
+            padding: 15px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .post-item {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .post-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .post-item:hover img {
+            transform: scale(1.05);
+        }
+        
+        .post-type-icon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 1.2rem;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .post-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .post-item:hover .post-overlay {
+            opacity: 1;
+        }
+        
+        .post-overlay-stats {
+            color: white;
+            font-weight: 600;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .loading, .error {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        .powered-by {
+            text-align: center;
+            padding: 10px;
+            font-size: 0.75rem;
+            color: #999;
+        }
+        
+        .powered-by a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 id="headerTitle">📸 Instagram Feed</h2>
+    </div>
+    
+    <div id="content">
+        <div class="loading">Chargement des posts...</div>
+    </div>
+    
+    <div class="powered-by">
+        Powered by <a href="/" target="_blank">Instagram Feed API (github:iliass7777)</a>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        let username = params.get('username');
+        let limit = params.get('limit') || 9;
+        
+        // Vérifier si on est sur une URL /embed/:id
+        const pathParts = window.location.pathname.split('/');
+        const embedId = pathParts[2]; // /embed/ID
+        
+        const API_URL = '/api/v1/instagram/posts';
+        const PROXY_URL = '/api/v1/proxy/image?url=';
+        
+        function getProxyUrl(url) {
+            if (!url) return '';
+            return PROXY_URL + encodeURIComponent(url);
+        }
+        
+        async function loadPosts() {
+            // Si on a un embedId, charger la config depuis l'API
+            if (embedId && !username) {
+                try {
+                    const configRes = await fetch(`/api/v1/embeds/${embedId}`);
+                    const configData = await configRes.json();
+                    if (configData.success && configData.embed) {
+                        username = configData.embed.username;
+                        limit = configData.embed.limit;
+                    } else {
+                        document.getElementById('content').innerHTML = '<div class="error">Embed non trouvé</div>';
+                        return;
+                    }
+                } catch (e) {
+                    document.getElementById('content').innerHTML = '<div class="error">Erreur de chargement</div>';
+                    return;
+                }
+            }
+            
+            if (!username) {
+                document.getElementById('content').innerHTML = '<div class="error">Username manquant</div>';
+                return;
+            }
+            
+            document.getElementById('headerTitle').textContent = `📸 @${username}`;
+            
+            try {
+                const response = await fetch(`${API_URL}?username=${username}&limit=${limit}`);
+                const data = await response.json();
+                
+                if (data.success && data.data.length > 0) {
+                    document.getElementById('content').innerHTML = `
+                        <div class="posts-grid">
+                            ${data.data.map(post => renderPost(post)).join('')}
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('content').innerHTML = `<div class="error">${data.error || 'Aucun post trouvé'}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('content').innerHTML = '<div class="error">Erreur de chargement</div>';
+            }
+        }
+        
+        function renderPost(post) {
+            const imageUrl = getProxyUrl(post.thumbnail_url || post.media_url);
+            const isVideo = post.media_type === 'VIDEO';
+            
+            return `
+                <a class="post-item" href="${post.permalink}" target="_blank">
+                    <img src="${imageUrl}" alt="Post" loading="lazy">
+                    ${isVideo ? '<span class="post-type-icon">▶️</span>' : ''}
+                    <div class="post-overlay">
+                        <div class="post-overlay-stats">
+                            <span>❤️ ${formatNumber(post.likes)}</span>
+                            <span>💬 ${formatNumber(post.comments)}</span>
+                        </div>
+                    </div>
+                </a>
+            `;
+        }
+        
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+        
+        loadPosts();
+    </script>
+</body>
+</html>
+

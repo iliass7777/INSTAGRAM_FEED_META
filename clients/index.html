@@ -153,6 +153,135 @@
             margin-left: auto;
         }
         
+        .embed-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 15px;
+        }
+        
+        .embed-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        /* Embed Modal */
+        .embed-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .embed-modal.show {
+            display: flex;
+        }
+        
+        .embed-modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+        }
+        
+        .embed-modal-content h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .embed-modal-content p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .embed-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .embed-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .embed-tab {
+            padding: 8px 20px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .embed-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .embed-code-container {
+            position: relative;
+        }
+        
+        #embedCode {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            resize: none;
+            background: #f8f9fa;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .copy-btn:hover {
+            background: #5a6fd6;
+        }
+        
+        .embed-note {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 10px;
+        }
+        
         .stat {
             text-align: center;
             padding: 8px 16px;
@@ -467,6 +596,25 @@
                     <div class="stat-label">Posts</div>
                 </div>
             </div>
+            <button class="embed-btn" id="embedBtn" type="button">Générer le code</button>
+        </div>
+        
+        <!-- Modal pour le code embed -->
+        <div class="embed-modal" id="embedModal">
+            <div class="embed-modal-content">
+                <button class="embed-modal-close" onclick="closeEmbedModal()">×</button>
+                <h3>🔗 Code d'intégration</h3>
+                <p>Copiez ce code et collez-le dans votre site web :</p>
+                <div class="embed-tabs">
+                    <button class="embed-tab active" onclick="showEmbedTab('iframe', this)">Iframe</button>
+                    <button class="embed-tab" onclick="showEmbedTab('script', this)">Script</button>
+                </div>
+                <div class="embed-code-container">
+                    <textarea id="embedCode" readonly></textarea>
+                    <button class="copy-btn" onclick="copyEmbedCode()">📋 Copier</button>
+                </div>
+                <p class="embed-note" id="embedNote"></p>
+            </div>
         </div>
         
         <div id="content">
@@ -489,8 +637,9 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:5000/api/v1/instagram/posts';
-        const PROXY_URL = 'http://localhost:5000/api/v1/proxy/image?url=';
+        const BASE_URL = 'http://localhost:5000';
+        const API_URL = BASE_URL + '/api/v1/instagram/posts';
+        const PROXY_URL = BASE_URL + '/api/v1/proxy/image?url=';
         
         const searchForm = document.getElementById('searchForm');
         const usernameInput = document.getElementById('username');
@@ -622,6 +771,95 @@
             if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
             return num.toString();
         }
+        
+        // ========== EMBED CODE GENERATOR ==========
+        let currentEmbedType = 'iframe';
+        let currentUsername = '';
+        let currentLimit = 12;
+        let currentEmbedData = null;
+        
+        async function generateEmbedCode() {
+            currentUsername = document.getElementById('username').value.trim().replace('@', '');
+            currentLimit = document.getElementById('limit').value;
+            
+            if (!currentUsername) {
+                alert('Veuillez d\'abord rechercher un compte Instagram');
+                return;
+            }
+            
+            // Créer l'embed côté serveur pour qu'il soit permanent
+            try {
+                const response = await fetch(BASE_URL + '/api/v1/embeds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUsername, limit: parseInt(currentLimit) })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentEmbedData = data;
+                    showEmbedTab('iframe');
+                    document.getElementById('embedModal').classList.add('show');
+                } else {
+                    alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+                }
+            } catch (e) {
+                console.error('Erreur:', e);
+                alert('Erreur de connexion au serveur');
+            }
+        }
+        
+        function showEmbedTab(type, clickedTab = null) {
+            if (!currentEmbedData) return;
+            
+            currentEmbedType = type;
+            
+            // Update tab buttons
+            document.querySelectorAll('.embed-tab').forEach(tab => tab.classList.remove('active'));
+            if (clickedTab) {
+                clickedTab.classList.add('active');
+            } else {
+                document.querySelector('.embed-tab:first-child').classList.add('active');
+            }
+            
+            const embedCode = document.getElementById('embedCode');
+            const embedNote = document.getElementById('embedNote');
+            
+            // Utiliser les codes retournés par l'API (stockés dans la base)
+            if (type === 'iframe') {
+                embedCode.value = currentEmbedData.iframeCode;
+            } else {
+                embedCode.value = currentEmbedData.scriptCode;
+            }
+            embedNote.textContent = `💡 URL permanente: ${currentEmbedData.embedUrl}`;
+        }
+        
+        function closeEmbedModal() {
+            document.getElementById('embedModal').classList.remove('show');
+        }
+        
+        function copyEmbedCode() {
+            const embedCode = document.getElementById('embedCode');
+            embedCode.select();
+            document.execCommand('copy');
+            
+            const copyBtn = document.querySelector('.copy-btn');
+            copyBtn.textContent = '✅ Copié !';
+            setTimeout(() => copyBtn.textContent = '📋 Copier', 2000);
+        }
+        
+        // Fermer le modal embed en cliquant dehors
+        document.getElementById('embedModal').addEventListener('click', (e) => {
+            if (e.target.id === 'embedModal') closeEmbedModal();
+        });
+        
+        // Attacher l'événement au bouton
+        document.getElementById('embedBtn').addEventListener('click', (e) => {
+            console.log('clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            generateEmbedCode();
+        });
     </script>
 </body>
 </html>

@@ -27,6 +27,11 @@ app.get("/", (req , res) => {
     res.sendFile(path.join(__dirname, 'clients', 'index.html'));
 });
 
+/* Route pour les embeds permanents */
+app.get("/embed/:id", (req , res) => {
+    res.sendFile(path.join(__dirname, 'clients', 'embed.html'));
+});
+
 app.get("/api", (req , res) => {
     res.status(200);
     res.send("META API - Instagram Feed Backend");

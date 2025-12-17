@@ -2,6 +2,12 @@ require("dotenv").config();
 const f = require("../functions");
 const https = require('https');
 const http = require('http');
+const db = require('../db/db');
+
+// Générer un ID court unique
+function generateId() {
+  return Math.random().toString(36).substring(2, 10);
+}
 
 // Endpoint pour récupérer les posts d'un compte Instagram PUBLIC
 exports.getInstagramPosts = async (req, res) => {
@@ -77,5 +83,89 @@ exports.getMyInstagramPosts = async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(400).json({ error: error.message || error });
+  }
+};
+
+// ========== EMBED MANAGEMENT (SQLite) ==========
+
+// Créer ou mettre à jour un embed (un seul par username)
+exports.createEmbed = async (req, res) => {
+  try {
+    const { username, limit } = req.body;
+    
+    if (!username) {
+      return res.status(400).json({ error: "Username requis" });
+    }
+    
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const id = generateId();
+    const result = db.createEmbed(id, username, limit || 12, baseUrl);
+    
+    res.json({
+      success: true,
+      id: result.id,
+      embedUrl: result.embedUrl,
+      iframeCode: result.iframeCode,
+      scriptCode: result.scriptCode,
+      updated: result.updated || false
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Récupérer un embed par ID
+exports.getEmbed = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const embed = db.getEmbed(id);
+    
+    if (!embed) {
+      return res.status(404).json({ error: "Embed non trouvé" });
+    }
+    
+    res.json({ 
+      success: true, 
+      embed: {
+        id: embed.id,
+        username: embed.username,
+        limit: embed.limit_count,
+        createdAt: embed.created_at
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Lister tous les embeds
+exports.listEmbeds = async (req, res) => {
+  try {
+    const embeds = db.listEmbeds().map(e => ({
+      id: e.id,
+      username: e.username,
+      limit: e.limit_count,
+      createdAt: e.created_at
+    }));
+    res.json({ success: true, embeds });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Supprimer un embed
+exports.deleteEmbed = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const embed = db.getEmbed(id);
+    
+    if (!embed) {
+      return res.status(404).json({ error: "Embed non trouvé" });
+    }
+    
+    db.deleteEmbed(id);
+    res.json({ success: true, message: "Embed supprimé" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
